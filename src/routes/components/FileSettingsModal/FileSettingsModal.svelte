@@ -67,7 +67,7 @@
 
 		<Input
 			label={`Quality (${canSetQuality ? '0-100' : 'disabled'})`}
-			type="text"
+			type="number"
 			bind:value={formValues.quality}
 			tooltip={canSetQuality
 				? 'A higher value means better quality but larger file size'
