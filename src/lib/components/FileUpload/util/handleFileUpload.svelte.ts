@@ -2,29 +2,41 @@ import { appSettingsStore, fileStore, unsupportedFilesStore } from '$stores';
 import type { ArchiveMime, ImageMime, UploadedFile } from '$types';
 import { EXT_TO_DEFAULT_QUALITY } from '$constants';
 import { supportedFormatsStore } from '$stores';
-import unzipFile from './unzipFile.svelte';
+import getFilesFromArchive from './getFilesFromArchive';
 
 const getSupportedFiles = async (files: File[]) => {
 	const filesToUpload: File[] = [];
-	const filesToNotUpload: string[] = [];
+	const fileNamesToNotUpload: string[] = [];
 
-	for (const file of files) {
+	const filesToLoop: File[] = files;
+	let filesToLoopLength = filesToLoop.length;
+
+	for (let i = 0; i < filesToLoopLength; i++) {
+		const file = filesToLoop[i];
+
 		if (supportedFormatsStore.imageInputs.includes(file.type as ImageMime)) {
 			filesToUpload.push(file);
 		} else if (supportedFormatsStore.archiveInputs.includes(file.type as ArchiveMime)) {
-			const { files, filteredFiles } = await unzipFile(file);
-			filesToUpload.push(...files);
-			filesToNotUpload.push(...filteredFiles);
+			// prefix path with nested structure (if applicable)
+			let basePath = '';
+			const pathParts = file.name.split('/');
+			if (pathParts.length > 1) {
+				basePath = pathParts.slice(0, -1).join('/');
+			}
+			const files = await getFilesFromArchive(file, basePath);
+
+			filesToLoop.push(...files);
+			filesToLoopLength = filesToLoop.length;
 		} else {
-			filesToNotUpload.push(file.name);
+			fileNamesToNotUpload.push(file.name || 'image');
 		}
 	}
 
-	return { filesToUpload, filesToNotUpload };
+	return { filesToUpload, fileNamesToNotUpload };
 };
 
 const handleFileUpload = async (files: File[]) => {
-	const { filesToUpload, filesToNotUpload } = await getSupportedFiles(files);
+	const { filesToUpload, fileNamesToNotUpload } = await getSupportedFiles(files);
 
 	const newFiles: Record<string, UploadedFile> = Object.fromEntries(filesToUpload.map((file) => {
 		const outputMime = appSettingsStore.settings.preferredImageMime;
@@ -39,7 +51,7 @@ const handleFileUpload = async (files: File[]) => {
 		];
 	}));
 
-	unsupportedFilesStore.add(filesToNotUpload);
+	unsupportedFilesStore.add(fileNamesToNotUpload);
 	fileStore.add(newFiles);
 };
 

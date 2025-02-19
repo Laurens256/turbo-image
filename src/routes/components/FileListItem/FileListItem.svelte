@@ -15,26 +15,27 @@
 
 	const filename = uploadedFile.file.name;
 
-	enum DownloadState {
-		IDLE = 'idle',
-		LOADING = 'loading',
-		ERROR = 'error',
-	}
+	const downloadStates = {
+		IDLE: 'idle',
+		LOADING: 'loading',
+		ERROR: 'error',
+	};
+	type DownloadState = typeof downloadStates[keyof typeof downloadStates];
 
-	let downloadState = $state<DownloadState>(DownloadState.IDLE);
-	let isLoading = $derived(downloadState === DownloadState.LOADING);
-	let isError = $derived(downloadState === DownloadState.ERROR);
+	let downloadState = $state<DownloadState>(downloadStates.IDLE);
+	let isLoading = $derived(downloadState === downloadStates.LOADING);
+	let isError = $derived(downloadState === downloadStates.ERROR);
 
 	const handleDownloadClick = async (uploadedFile: UploadedFile) => {
-		downloadState = DownloadState.LOADING;
+		downloadState = downloadStates.LOADING;
 		try {
 			await downloadUtil.downloadFiles([uploadedFile]);
-			downloadState = DownloadState.IDLE;
+			downloadState = downloadStates.IDLE;
 			} catch (error) {
 			if (error instanceof DOMException && error.name === 'AbortError') {
-				downloadState = DownloadState.IDLE;
+				downloadState = downloadStates.IDLE;
 			} else {
-				downloadState = DownloadState.ERROR;
+				downloadState = downloadStates.ERROR;
 				console.error(error);
 			}
 		}

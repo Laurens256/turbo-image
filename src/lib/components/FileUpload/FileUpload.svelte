@@ -1,8 +1,7 @@
 <script lang="ts">
-	import 'native-file-system-adapter'; // polyfill for getAsFileSystemHandle
 	import { supportedFormatsStore } from '$stores';
 	import type { Snippet } from 'svelte';
-	import { handleFileUpload, getFilesFromDirectoryHandle } from './util/index';
+	import { handleFileUpload, getFilesFromDataTransferItemList } from './util/index';
 
 	type Props = {
 		containerClass?: string;
@@ -12,36 +11,25 @@
 	let { containerClass, children, withFullScreenDropZone = true }: Props = $props();
 	let dragEnterElement: HTMLElement | null = $state(null);
 
-	const handleClickFileUpload = (e: Event & { currentTarget: EventTarget & HTMLInputElement }) => {
+	const handleClickFileUpload = async (e: Event & { currentTarget: EventTarget & HTMLInputElement }) => {
 		e.preventDefault();
 		const files = Array.from(e.currentTarget.files || []);
-		handleFileUpload(files);
+		await handleFileUpload(files);
 	};
 
 	const handleDragFileUpload = async (e: DragEvent) => {
 		e.preventDefault();
 		dragEnterElement = null;
 
-		const filePromises = Array.from(e.dataTransfer?.items || []).map(async (item) => {
-			const handle = await item.getAsFileSystemHandle();
-			if (!handle) return [];
+		const files = await getFilesFromDataTransferItemList(e.dataTransfer?.items);
+		await handleFileUpload(files);
+	};
 
-			if (handle.kind === 'directory') {
-				const files = await getFilesFromDirectoryHandle(handle as FileSystemDirectoryHandle);
-				return Promise.all(Object.entries(files).map(async ([path, filePromise]) => {
-					const file = await filePromise;
-					return new File([file], path, { type: file.type });
-				}));
-			} else if (handle.kind === 'file') {
-				return (handle as FileSystemFileHandle).getFile();
-			}
+	const handleFilePaste = async (e: ClipboardEvent & { currentTarget: EventTarget & Document; }) => {
+		e.preventDefault();
 
-			return [];
-		});
-
-		const files = (await Promise.all(filePromises)).flat();
-
-		handleFileUpload(files);
+		const files = await getFilesFromDataTransferItemList(e.clipboardData?.items);
+		await handleFileUpload(files);
 	};
 
 	// util for tracking when the user is dragging a file over the document
@@ -60,6 +48,7 @@
 <svelte:document
 	ondragenter={withFullScreenDropZone ? handleDragEnter : null}
 	ondragleave={withFullScreenDropZone ? handleDragLeave : null}
+	onpaste={handleFilePaste}
 />
 <input
 	class="input"

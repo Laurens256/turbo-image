@@ -21,6 +21,10 @@
 	};
 </script>
 
+<svelte:body
+	ondragenter={onClose}
+/>
+
 <div
 	class="container"
 	class:active={isOpen}

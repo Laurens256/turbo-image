@@ -1,7 +1,7 @@
 import handleFileUpload from './handleFileUpload.svelte';
-import getFilesFromDirectoryHandle from './getFilesFromDirectoryHandle';
+import getFilesFromDataTransferItemList from './getFilesFromDataTransferItemList';
 
 export {
 	handleFileUpload,
-	getFilesFromDirectoryHandle,
+	getFilesFromDataTransferItemList,
 };
